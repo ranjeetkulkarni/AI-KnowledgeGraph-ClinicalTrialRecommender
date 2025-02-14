@@ -17,8 +17,9 @@ Our innovative solution, developed for the Novartis-sponsored NEST 2025 Hackatho
 The system processes over 450,000 clinical trials to deliver strategic insights that streamline pharmaceutical R&D processes.
 
 <div align="center">
-  <img src="images\Knowledge_graph1.jpg" alt="Knowledge Graph 1" width="30%"/>
-  <img src="images\Knowlegde_graph2.jpg" alt="Knowledge Graph 2" width="30%"/>
+  <img src="images\Knowledge_graph1.jpg" alt="Knowledge Graph 1" width="90%"/>
+  <br><br>
+  <img src="images\Knowlegde_graph2.jpg" alt="Knowledge Graph 2" width="90%"/>
 </div>
 
 ## 🎯 Key Results
@@ -26,9 +27,10 @@ The system processes over 450,000 clinical trials to deliver strategic insights 
 <div align="center">
   <table>
     <tr>
-      <td align="center"><img src="images\output1.jpg" width="200"/></td>
-      <td align="center"><img src="images\output2.jpg" width="200"/></td>
-      <td align="center"><img src="images\output3.jpg" width="200"/></td>
+      <!-- Increased width from 200 to 300 for larger, more readable images -->
+      <td align="center"><img src="images\output1.jpg" width="300"/></td>
+      <td align="center"><img src="images\output2.jpg" width="300"/></td>
+      <td align="center"><img src="images\output3.jpg" width="300"/></td>
     </tr>
     <tr>
       <td align="center"><b>Trial 1 Recommendations</b></td>
@@ -87,6 +89,7 @@ You can choose to run either the Python scripts or the Jupyter notebooks, depend
 
 - **Report**: A comprehensive report summarizing the system's architecture, methodology, and results (`report.pdf`)
 - **Metric Evaluation**: Code for evaluating the system's performance (`metric_evaluation.py`)
-- **User Guide**: Detailed instructions on setting up and using the repository
+- **User Guide**: Detailed instructions on setting up and using the repository - [View User Guide](Python%20Notebooks/UserGuide.pdf)
+
 
 Both script and notebook approaches are identical in terms of functionality and code. Feel free to use whichever format suits your workflow!
