@@ -80,7 +80,7 @@ You can choose to run either the Python scripts or the Jupyter notebooks, depend
 
 ## 🏆 Achievements
 
-- **NEST 2025 Semifinalist**: [Recognized at Unstop](https://unstop.com/competitions/novartis-nest-novartis-1213177/case-submissions/481313) for innovative approach
+-- **NEST 2025 Semifinalist:** *Team Newbie Neurons* — Recognized at [Unstop](https://unstop.com/competitions/novartis-nest-novartis-1213177/case-submissions/481313) for our innovative approach.
 - **High Accuracy**: 0.857 cosine similarity score
 - **Enterprise-Ready**: Cloud-native architecture
 - **Scalable Solution**: Processes 450,000+ trials efficiently
