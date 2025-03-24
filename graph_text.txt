@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neo4j Graph Visualization</title>
+  
+  <!-- Import vis-network library -->
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  
+  <style>
+    /* Reset and base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --secondary: #f3f4f6;
+      --secondary-dark: #1f2937;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --text-dark: #f8fafc;
+      --text-dark-light: #94a3b8;
+      --background: #ffffff;
+      --background-dark: #0f172a;
+      --card: #ffffff;
+      --card-dark: #1e293b;
+      --border: #e2e8f0;
+      --border-dark: #334155;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      
+      /* Node colors */
+      --color-trials: #6366f1;
+      --color-conditions: #ec4899;
+      --color-treatments: #10b981;
+      --color-measures: #f59e0b;
+      --color-populations: #8b5cf6;
+    }
+    
+    body {
+      background-color: var(--background);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    body.dark {
+      background-color: var(--background-dark);
+      color: var(--text-dark);
+    }
+    
+    /* Header styles */
+    header {
+      height: 64px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      background-color: var(--card);
+      position: relative;
+      z-index: 10;
+    }
+    
+    body.dark header {
+      background-color: var(--card-dark);
+      border-color: var(--border-dark);
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+    
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: linear-gradient(to right, #6366f1, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .logo-icon::before {
+      content: '';
+      width: 16px;
+      height: 16px;
+      background-color: white;
+      border-radius: 50%;
+    }
+    
+    .search-container {
+      position: relative;
+      max-width: 400px;
+      width: 100%;
+      display: none;
+    }
+    
+    @media (min-width: 768px) {
+      .search-container {
+        display: block;
+      }
+    }
+    
+    .search-input {
+      width: 100%;
+      padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+      border-radius: 0.375rem;
+      border: 1px solid var(--border);
+      background-color: var(--secondary);
+      color: var(--text);
+      font-size: 0.875rem;
+    }
+    
+    body.dark .search-input {
+      background-color: var(--secondary-dark);
+      border-color: var(--border-dark);
+      color: var(--text-dark);
+    }
+    
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      width: 16px;
+      height: 16px;
+    }
+    
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      font-size: 0.875rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      background: none;
+      color: var(--text);
+    }
+    
+    body.dark .btn {
+      color: var(--text-dark);
+    }
+    
+    .btn-icon {
+      padding: 0.5rem;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(to right, #6366f1, #8b5cf6);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+    
+    .btn-outline {
+      border: 1px solid var(--border);
+      background-color: transparent;
+    }
+    
+    body.dark .btn-outline {
+      border-color: var(--border-dark);
+    }
+    
+    .btn-outline:hover {
+      background-color: var(--secondary);
+    }
+    
+    body.dark .btn-outline:hover {
+      background-color: var(--secondary-dark);
+    }
+    
+    /* Main layout */
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      border-right: 1px solid var(--border);
+      background-color: var(--card);
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s;
+      overflow: hidden;
+    }
+    
+    body.dark .sidebar {
+      background-color: var(--card-dark);
+      border-color: var(--border-dark);
+    }
+    
+    .sidebar.collapsed {
+      width: 64px;
+    }
+    
+    .sidebar-header {
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    body.dark .sidebar-header {
+      border-color: var(--border-dark);
+    }
+    
+    .sidebar-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+    
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+    
+    .sidebar-section {
+      margin-bottom: 1.5rem;
+    }
+    
+    .sidebar-section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-light);
+      margin-bottom: 0.5rem;
+    }
+    
+    body.dark .sidebar-section-title {
+      color: var(--text-dark-light);
+    }
+    
+    .sidebar-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    .sidebar.collapsed .sidebar-buttons {
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    
+    .color-item {
+      aspect-ratio: 1;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .color-item:hover {
+      transform: scale(1.05);
+    }
+    
+    .slider-container {
+      margin-bottom: 1rem;
+    }
+    
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .slider-label {
+      color: var(--text-light);
+    }
+    
+    body.dark .slider-label {
+      color: var(--text-dark-light);
+    }
+    
+    .slider {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+    }
+    
+    body.dark .slider {
+      background: var(--border-dark);
+    }
+    
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+    }
+    
+    .slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      border: none;
+    }
+    
+    .sidebar-footer {
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    body.dark .sidebar-footer {
+      border-color: var(--border-dark);
+    }
+    
+    .sidebar.collapsed .sidebar-footer {
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    /* Main content */
+    .main-content {
+      flex: 1;
+      padding: 1rem;
+      overflow: auto;
+      position: relative;
+    }
+    
+    .graph-container {
+      background-color: var(--card);
+      border-radius: 0.75rem;
+      box-shadow: var(--shadow);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    body.dark .graph-container {
+      background-color: var(--card-dark);
+    }
+    
+    .graph-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    body.dark .graph-header {
+      border-color: var(--border-dark);
+    }
+    
+    .graph-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    
+    .graph-subtitle {
+      font-size: 0.875rem;
+      color: var(--text-light);
+    }
+    
+    body.dark .graph-subtitle {
+      color: var(--text-dark-light);
+    }
+    
+    .graph-visualization {
+      flex: 1;
+      position: relative;
+    }
+    
+    #network-container {
+      width: 100%;
+      height: 100%;
+    }
+    
+    .graph-controls {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      z-index: 10;
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .node-details {
+      position: absolute;
+      bottom: 1rem;
+      left: 1rem;
+      z-index: 10;
+      width: 300px;
+      background-color: var(--card);
+      border-radius: 0.5rem;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: none;
+    }
+    
+    body.dark .node-details {
+      background-color: var(--card-dark);
+      border-color: var(--border-dark);
+    }
+    
+    .node-details-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    
+    body.dark .node-details-header {
+      border-color: var(--border-dark);
+    }
+    
+    .node-details-title {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    
+    .node-badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+      font-weight: 500;
+    }
+    
+    .node-details-content {
+      padding: 1rem;
+    }
+    
+    .node-details-section {
+      margin-bottom: 1rem;
+    }
+    
+    .node-details-label {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      margin-bottom: 0.25rem;
+    }
+    
+    body.dark .node-details-label {
+      color: var(--text-dark-light);
+    }
+    
+    .node-details-value {
+      font-size: 0.875rem;
+    }
+    
+    .node-details-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin-top: 0.5rem;
+    }
+    
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+      background-color: var(--secondary);
+      color: var(--text);
+    }
+    
+    body.dark .badge {
+      background-color: var(--secondary-dark);
+      color: var(--text-dark);
+    }
+    
+    .graph-legend {
+      position: absolute;
+      bottom: 1rem;
+      right: 1rem;
+      z-index: 10;
+      background-color: var(--card);
+      border-radius: 0.375rem;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      padding: 0.5rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    body.dark .graph-legend {
+      background-color: var(--card-dark);
+      border-color: var(--border-dark);
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+    }
+    
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    
+    /* Loading overlay */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background-color: rgba(255, 255, 255, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    
+    body.dark .loading-overlay {
+      background-color: rgba(15, 23, 42, 0.8);
+    }
+    
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(99, 102, 241, 0.1);
+      border-left-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+    
+    .loading-text {
+      font-size: 1.25rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    
+    .progress-bar-container {
+      width: 256px;
+      height: 8px;
+      background-color: var(--secondary);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    
+    body.dark .progress-bar-container {
+      background-color: var(--secondary-dark);
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background-color: var(--primary);
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+    
+    .progress-text {
+      font-size: 0.875rem;
+      color: var(--text-light);
+    }
+    
+    body.dark .progress-text {
+      color: var(--text-dark-light);
+    }
+    
+    /* Tooltip */
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .tooltip .tooltip-text {
+      visibility: hidden;
+      width: 120px;
+      background-color: var(--secondary-dark);
+      color: var(--text-dark);
+      text-align: center;
+      border-radius: 6px;
+      padding: 5px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 0.75rem;
+    }
+    
+    .tooltip .tooltip-text::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: var(--secondary-dark) transparent transparent transparent;
+    }
+    
+    .tooltip:hover .tooltip-text {
+      visibility: visible;
+      opacity: 1;
+    }
+    
+    /* Animations */
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    
+    /* Icons */
+    .icon {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    
+    .icon-sm {
+      width: 16px;
+      height: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <span>GraphViz</span>
+    </div>
+    
+    <div class="search-container">
+      <svg class="search-icon" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" class="search-input" placeholder="Search nodes, relationships...">
+    </div>
+    
+    <div class="header-actions">
+      <button id="theme-toggle" class="btn btn-icon tooltip">
+        <svg class="icon" id="theme-icon" viewBox="0 0 24 24">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <span class="tooltip-text">Toggle Dark Mode</span>
+      </button>
+      
+      <button class="btn btn-primary">Export</button>
+    </div>
+  </header>
+  
+  <!-- Main Container -->
+  <div class="main-container">
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Graph Controls</span>
+        <button id="sidebar-toggle" class="btn btn-icon">
+          «
+        </button>
+      </div>
+      
+      <div class="sidebar-content">
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Visualization</div>
+          <div class="sidebar-buttons">
+            <button class="btn btn-outline btn-icon tooltip">
+              <svg class="icon-sm" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 2a10 10 0 0 1 10 10"></path>
+                <path d="M12 12L2 12"></path>
+                <path d="M12 12L19 12"></path>
+              </svg>
+              <span class="tooltip-text">Network View</span>
+            </button>
+            
+            <button class="btn btn-outline btn-icon tooltip">
+              <svg class="icon-sm" viewBox="0 0 24 24">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              </svg>
+              <span class="tooltip-text">Filter Nodes</span>
+            </button>
+            
+            <button class="btn btn-outline btn-icon tooltip">
+              <svg class="icon-sm" viewBox="0 0 24 24">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M2 17l10 5 10-5"></path>
+                <path d="M2 12l10 5 10-5"></path>
+              </svg>
+              <span class="tooltip-text">Layer Control</span>
+            </button>
+          </div>
+        </div>
+        
+        <div class="sidebar-section physics-controls">
+          <div class="sidebar-section-title">Physics</div>
+          
+          <div class="slider-container">
+            <div class="slider-header">
+              <span class="slider-label">Gravity</span>
+              <span class="slider-value">50%</span>
+            </div>
+            <input type="range" min="0" max="100" value="50" class="slider" id="gravity-slider">
+          </div>
+          
+          <div class="slider-container">
+            <div class="slider-header">
+              <span class="slider-label">Node Spacing</span>
+              <span class="slider-value">70%</span>
+            </div>
+            <input type="range" min="0" max="100" value="70" class="slider" id="spacing-slider">
+          </div>
+        </div>
+        
+        <div class="sidebar-section appearance-controls">
+          <div class="sidebar-section-title">Appearance</div>
+          <div class="color-grid">
+            <div class="color-item" style="background-color: #6366f1;"></div>
+            <div class="color-item" style="background-color: #8b5cf6;"></div>
+            <div class="color-item" style="background-color: #10b981;"></div>
+            <div class="color-item" style="background-color: #f59e0b;"></div>
+            <div class="color-item" style="background-color: #ef4444;"></div>
+            <div class="color-item" style="background-color: #64748b;"></div>
+          </div>
+        </div>
+        
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Data</div>
+          <div class="sidebar-buttons">
+            <button class="btn btn-outline btn-icon tooltip">
+              <svg class="icon-sm" viewBox="0 0 24 24">
+                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+              </svg>
+              <span class="tooltip-text">Data Source</span>
+            </button>
+            
+            <button class="btn btn-outline btn-icon tooltip">
+              <svg class="icon-sm" viewBox="0 0 24 24">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+              <span class="tooltip-text">Share Graph</span>
+            </button>
+            
+            <button class="btn btn-outline btn-icon tooltip">
+              <svg class="icon-sm" viewBox="0 0 24 24">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              <span class="tooltip-text">Save Graph</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="sidebar-footer">
+        <button class="btn btn-icon tooltip">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span class="tooltip-text">Documentation</span>
+        </button>
+        
+        <button class="btn btn-icon tooltip">
+          <svg class="icon" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span class="tooltip-text">Settings</span>
+        </button>
+        
+        <button class="btn btn-icon tooltip">
+          <svg class="icon" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span class="tooltip-text">Help</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="graph-container">
+        <div class="graph-header">
+          <h2 class="graph-title">Knowledge Graph Visualization</h2>
+          <p class="graph-subtitle">Explore relationships between clinical trials, treatments, and outcomes</p>
+        </div>
+        
+        <div class="graph-visualization">
+          <!-- Loading Overlay -->
+          <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner"></div>
+            <h3 class="loading-text">Loading Graph Visualization</h3>
+            <div class="progress-bar-container">
+              <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+            </div>
+            <p id="progress-text" class="progress-text">0% complete</p>
+          </div>
+          
+          <!-- Graph Controls -->
+          <div class="graph-controls">
+            <button id="zoom-in" class="btn btn-outline btn-icon tooltip">
+              <svg class="icon-sm" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <line x1="11" y1="8" x2="11" y2="14"></line>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+              </svg>
+              <span class="tooltip-text">Zoom In</span>
+            </button>
+            
+            <button id="zoom-out" class="btn btn-outline btn-icon tooltip">
+              <svg class="icon-sm" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+              </svg>
+              <span class="tooltip-text">Zoom Out</span>
+            </button>
+            
+            <button id="fit-graph" class="btn btn-outline btn-icon tooltip">
+              <svg class="icon-sm" viewBox="0 0 24 24">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+              </svg>
+              <span class="tooltip-text">Fit Graph</span>
+            </button>
+            
+            <button id="reset-physics" class="btn btn-outline btn-icon tooltip">
+              <svg class="icon-sm" viewBox="0 0 24 24">
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+              <span class="tooltip-text">Reset Physics</span>
+            </button>
+          </div>
+          
+          <!-- Node Details Panel -->
+          <div id="node-details" class="node-details">
+            <div class="node-details-header">
+              <h3 id="node-title" class="node-details-title">Node Title</h3>
+              <span id="node-type" class="node-badge">Type</span>
+            </div>
+            <div class="node-details-content">
+              <div class="node-details-section">
+                <div class="node-details-label">ID</div>
+                <div id="node-id" class="node-details-value">NCT12345678</div>
+              </div>
+              <div class="node-details-section">
+                <div class="node-details-label">Connections</div>
+                <div id="node-connections" class="node-details-value">Connected to 5 other nodes</div>
+              </div>
+              <div class="node-details-section">
+                <div class="node-details-label">Categories</div>
+                <div class="node-details-badges">
+                  <span class="badge">Clinical Trial</span>
+                  <span class="badge">Research</span>
+                  <span class="badge">Medical</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Graph Legend -->
+          <div class="graph-legend">
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: var(--color-trials);"></div>
+              <span>Trials</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: var(--color-conditions);"></div>
+              <span>Conditions</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: var(--color-treatments);"></div>
+              <span>Treatments</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: var(--color-measures);"></div>
+              <span>Measures</span>
+            </div>
+          </div>
+          
+          <!-- Network Container -->
+          <div id="network-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // DOM Elements
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebar = document.getElementById('sidebar');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const nodeDetails = document.getElementById('node-details');
+    const nodeTitle = document.getElementById('node-title');
+    const nodeType = document.getElementById('node-type');
+    const nodeId = document.getElementById('node-id');
+    const nodeConnections = document.getElementById('node-connections');
+    const zoomIn = document.getElementById('zoom-in');
+    const zoomOut = document.getElementById('zoom-out');
+    const fitGraph = document.getElementById('fit-graph');
+    const resetPhysics = document.getElementById('reset-physics');
+    const gravitySlider = document.getElementById('gravity-slider');
+    const spacingSlider = document.getElementById('spacing-slider');
+    
+    // Theme Toggle
+    let isDarkMode = false;
+    
+    themeToggle.addEventListener('click', () => {
+      isDarkMode = !isDarkMode;
+      document.body.classList.toggle('dark', isDarkMode);
+      
+      // Update moon/sun icon
+      if (isDarkMode) {
+        themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+      } else {
+        themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+      }
+    });
+    
+    // Sidebar Toggle
+    sidebarToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      
+      if (sidebar.classList.contains('collapsed')) {
+        sidebarToggle.textContent = '»';
+        document.querySelectorAll('.sidebar-section-title').forEach(el => {
+          el.style.display = 'none';
+        });
+        document.querySelectorAll('.physics-controls, .appearance-controls').forEach(el => {
+          el.style.display = 'none';
+        });
+      } else {
+        sidebarToggle.textContent = '«';
+        document.querySelectorAll('.sidebar-section-title').forEach(el => {
+          el.style.display = 'block';
+        });
+        document.querySelectorAll('.physics-controls, .appearance-controls').forEach(el => {
+          el.style.display = 'block';
+        });
+      }
+    });
+    
+    // Slider value updates
+    gravitySlider.addEventListener('input', function() {
+      const value = this.value;
+      this.previousElementSibling.querySelector('.slider-value').textContent = `${value}%`;
+      
+      if (network) {
+        network.setOptions({
+          physics: {
+            barnesHut: {
+              gravitationalConstant: -2000 * (value / 50)
+            }
+          }
+        });
+      }
+    });
+    
+    spacingSlider.addEventListener('input', function() {
+      const value = this.value;
+      this.previousElementSibling.querySelector('.slider-value').textContent = `${value}%`;
+      
+      if (network) {
+        network.setOptions({
+          physics: {
+            barnesHut: {
+              springLength: 150 * (value / 70)
+            }
+          }
+        });
+      }
+    });
+    
+    // Network Visualization
+    let network = null;
+    
+    // Create sample data
+    function createSampleData() {
+      // Create nodes
+      const nodes = new vis.DataSet([
+        { id: 1, label: 'NCT03821493', title: 'Clinical Trial', group: 'trials' },
+        { id: 2, label: 'Advanced Solid Malignancies', title: 'Condition', group: 'conditions' },
+        { id: 3, label: 'Isavuconazole', title: 'Treatment', group: 'treatments' },
+        { id: 4, label: 'AUCinf of PF-06835919', title: 'Measure', group: 'measures' },
+        { id: 5, label: 'Healthy Fed Participants', title: 'Population', group: 'populations' },
+        { id: 6, label: 'NCT04544293', title: 'Clinical Trial', group: 'trials' },
+        { id: 7, label: 'Idiopathic Pulmonary Fibrosis', title: 'Condition', group: 'conditions' },
+        { id: 8, label: 'Inhaled Molgramostim', title: 'Treatment', group: 'treatments' },
+        { id: 9, label: 'Change in Peak FEV1', title: 'Measure', group: 'measures' },
+        { id: 10, label: 'NCT03181893', title: 'Clinical Trial', group: 'trials' },
+        { id: 11, label: 'Dermatomyositis', title: 'Condition', group: 'conditions' },
+        { id: 12, label: 'Sabirnetug', title: 'Treatment', group: 'treatments' },
+      ]);
+      
+      // Create edges
+      const edges = new vis.DataSet([
+        { from: 1, to: 2, label: 'INVOLVES' },
+        { from: 1, to: 3, label: 'EVALUATES' },
+        { from: 1, to: 4, label: 'MEASURES_PRIMARY' },
+        { from: 1, to: 5, label: 'INVOLVES' },
+        { from: 6, to: 7, label: 'INVOLVES' },
+        { from: 6, to: 8, label: 'EVALUATES' },
+        { from: 6, to: 9, label: 'MEASURES_PRIMARY' },
+        { from: 10, to: 11, label: 'INVOLVES' },
+        { from: 10, to: 12, label: 'EVALUATES' },
+        { from: 2, to: 7, label: 'RELATED_TO' },
+        { from: 3, to: 8, label: 'SIMILAR_TO' },
+      ]);
+      
+      return { nodes, edges };
+    }
+    
+    // Initialize network
+    function initNetwork() {
+      const container = document.getElementById('network-container');
+      const data = createSampleData();
+      
+      const options = {
+        nodes: {
+          shape: 'dot',
+          size: 16,
+          font: {
+            size: 14,
+            face: 'Inter, sans-serif',
+            color: isDarkMode ? '#f8fafc' : '#334155',
+          },
+          borderWidth: 2,
+          shadow: true,
+          color: {
+            border: '#ffffff',
+            background: '#6366f1',
+            highlight: {
+              border: '#ffffff',
+              background: '#4f46e5',
+            },
+            hover: {
+              border: '#ffffff',
+              background: '#4f46e5',
+            },
+          },
+        },
+        edges: {
+          width: 2,
+          color: {
+            color: isDarkMode ? '#64748b' : '#94a3b8',
+            highlight: isDarkMode ? '#94a3b8' : '#64748b',
+            hover: isDarkMode ? '#94a3b8' : '#64748b',
+          },
+          font: {
+            size: 12,
+            face: 'Inter, sans-serif',
+            color: isDarkMode ? '#94a3b8' : '#64748b',
+            background: isDarkMode ? '#1e293b' : '#ffffff',
+            strokeWidth: 3,
+            strokeColor: isDarkMode ? '#1e293b' : '#ffffff',
+            align: 'horizontal',
+          },
+          arrows: {
+            to: {
+              enabled: true,
+              scaleFactor: 0.5,
+            },
+          },
+          smooth: {
+            type: 'continuous',
+          },
+        },
+        groups: {
+          trials: {
+            color: { background: '#6366f1', border: '#4f46e5' },
+            shape: 'dot',
+          },
+          conditions: {
+            color: { background: '#ec4899', border: '#db2777' },
+            shape: 'dot',
+          },
+          treatments: {
+            color: { background: '#10b981', border: '#059669' },
+            shape: 'dot',
+          },
+          measures: {
+            color: { background: '#f59e0b', border: '#d97706' },
+            shape: 'dot',
+          },
+          populations: {
+            color: { background: '#8b5cf6', border: '#7c3aed' },
+            shape: 'dot',
+          },
+        },
+        physics: {
+          enabled: true,
+          barnesHut: {
+            gravitationalConstant: -2000,
+            centralGravity: 0.3,
+            springLength: 150,
+            springConstant: 0.04,
+            damping: 0.09,
+          },
+          stabilization: {
+            enabled: true,
+            iterations: 1000,
+            updateInterval: 50,
+            onProgress: function(progress) {
+              const percentage = Math.round(progress.iterations / progress.total * 100);
+              progressBar.style.width = `${percentage}%`;
+              progressText.textContent = `${percentage}% complete`;
+            },
+            onDone: function() {
+              setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+              }, 500);
+            }
+          },
+        },
+        interaction: {
+          hover: true,
+          tooltipDelay: 200,
+          hideEdgesOnDrag: true,
+          navigationButtons: false,
+          keyboard: {
+            enabled: true,
+            bindToWindow: false,
+          },
+        },
+      };
+      
+      // Create network
+      network = new vis.Network(container, data, options);
+      
+      // Node selection event
+      network.on('selectNode', function(params) {
+        const nodeId = params.nodes[0];
+        const node = data.nodes.get(nodeId);
+        
+        // Update node details panel
+        nodeTitle.textContent = node.label;
+        nodeType.textContent = node.group.charAt(0).toUpperCase() + node.group.slice(1, -1);
+        nodeId.textContent = node.id;
+        
+        // Set badge color based on node type
+        const typeColors = {
+          'trials': 'background-color: var(--color-trials); color: white;',
+          'conditions': 'background-color: var(--color-conditions); color: white;',
+          'treatments': 'background-color: var(--color-treatments); color: white;',
+          'measures': 'background-color: var(--color-measures); color: white;',
+          'populations': 'background-color: var(--color-populations); color: white;',
+        };
+        
+        nodeType.style = typeColors[node.group] || '';
+        
+        // Count connections
+        const connectedEdges = network.getConnectedEdges(nodeId);
+        nodeConnections.textContent = `Connected to ${connectedEdges.length} other node${connectedEdges.length !== 1 ? 's' : ''}`;
+        
+        // Show node details panel
+        nodeDetails.style.display = 'block';
+      });
+      
+      network.on('deselectNode', function() {
+        nodeDetails.style.display = 'none';
+      });
+      
+      // Zoom controls
+      zoomIn.addEventListener('click', function() {
+        const scale = network.getScale();
+        network.moveTo({ scale: scale * 1.2 });
+      });
+      
+      zoomOut.addEventListener('click', function() {
+        const scale = network.getScale();
+        network.moveTo({ scale: scale / 1.2 });
+      });
+      
+      fitGraph.addEventListener('click', function() {
+        network.fit({
+          animation: {
+            duration: 1000,
+            easingFunction: 'easeInOutQuad',
+          },
+        });
+      });
+      
+      resetPhysics.addEventListener('click', function() {
+        network.setOptions({ physics: { enabled: true } });
+        setTimeout(() => {
+          network.setOptions({ physics: { enabled: false } });
+        }, 3000);
+      });
+    }
+    
+    // Simulate loading progress
+    function simulateLoading() {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 10;
+        if (progress >= 100) {
+          clearInterval(interval);
+          progress = 100;
+          setTimeout(initNetwork, 500);
+        }
+        progressBar.style.width = `${Math.round(progress)}%`;
+        progressText.textContent = `${Math.round(progress)}% complete`;
+      }, 200);
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      simulateLoading();
+    });
+  </script>
+</body>
+</html>
