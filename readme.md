@@ -1,6 +1,10 @@
 <div align="center">
   <img src="images/novartis_logo.jpg" alt="Novartis Logo" width="200"/>
   <h1>AI-Powered Clinical Trial Recommendation System</h1>
+<h2 align="center">
+  🔖 <a href="https://drive.google.com/file/d/1yXBa1pHWLLKkyXedfK5J3-7UH_1DzAlx/view?usp=sharing"> View Project Report </a>
+</h2>
+  
   <p>
     <strong>Semifinalist at NEST 2025 Hackathon 🏆</strong><br>
     Transforming clinical trial design through advanced AI recommendations
